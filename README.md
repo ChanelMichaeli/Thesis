@@ -11,4 +11,4 @@ Stages:
    
    The first data set is the training set and all other are the testing sets.
 4. To get the affective dimensions of the sarcasm datasets , see evaluation_datasets_all_sublabels.ipynb.
-5. For the enrichment stage see enrichment.ipynb
+5. For the enrichment stage see enrichment_example.ipynb
