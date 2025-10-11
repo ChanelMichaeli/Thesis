@@ -181,9 +181,9 @@ class BERTKfold:
             lst[i]=absolute_path+lst[i]
         self.test_datasets=lst
         
-        self.f1_weighted_scores = dict()
+        self.f1_binary_scores = dict()
         for i in range (len(self.test_datasets)):
-            self.f1_weighted_scores[self.test_datasets[i]] = []
+            self.f1_binary_scores[self.test_datasets[i]] = []
             
         self.f1_macro_scores = dict()
         for i in range (len(self.test_datasets)):
@@ -215,8 +215,13 @@ class BERTKfold:
                 inputs,labels,masks = self.load_data(train_df)
                 train_dataset = CustomDataset(inputs=inputs, labels=labels, masks=masks)
                 labels_tensor = torch.tensor(train_dataset.labels, dtype=torch.long)
-                class_counts = torch.bincount(labels_tensor)
-                self.set_model(self.model_name,class_counts.to(self.device))
+                imbalanced= False ## we balanced the datasets.
+                if imbalanced:
+                    class_counts = torch.bincount(labels_tensor)
+                    self.set_model(self.model_name,class_counts.to(self.device))
+                else:
+                    self.set_model(self.model_name,None)
+
                 trainer = self.train(train_dataset)
                 
                 for i in range (len(self.test_datasets)):
@@ -227,23 +232,23 @@ class BERTKfold:
                     metrics = trainer.evaluate(test_dataset)
                     print(self.test_datasets[i]," metrics ",metrics)
                     # f1, recall, precision = self.evaluate_model(test,self.test_datasets[i])
-                    self.f1_weighted_scores[self.test_datasets[i]].append(metrics["eval_f1_weighted"])
+                    self.f1_binary_scores[self.test_datasets[i]].append(metrics["eval_f1_binary"])
                     self.f1_macro_scores[self.test_datasets[i]].append(metrics["eval_f1_macro"])
                     self.recall_scores[self.test_datasets[i]].append(metrics["eval_recall"])
                     self.precision_scores[self.test_datasets[i]].append(metrics["eval_precision"])
                     self.accuracy[self.test_datasets[i]].append(metrics["eval_accuracy"])
             
             #save results
-            res = {"test data":[],"mean f1 macro":[],"mean f1 weighted":[],"mean recall":[],"mean precision":[],"mean accuracy":[],"std f1 macro":[],"std f1 weighted":[],"std recall":[],"std precision":[],"std accuracy":[]}
+            res = {"test data":[],"mean f1 macro":[],"mean f1 binary":[],"mean recall":[],"mean precision":[],"mean accuracy":[],"std f1 macro":[],"std f1 binary":[],"std recall":[],"std precision":[],"std accuracy":[]}
             for i in range (len(self.test_datasets)):
                 res["test data"].append(self.test_datasets[i].split('/')[-2])
                 res["mean f1 macro"].append(sum(self.f1_macro_scores[self.test_datasets[i]])/n)
-                res["mean f1 weighted"].append(sum(self.f1_weighted_scores[self.test_datasets[i]])/n)
+                res["mean f1 binary"].append(sum(self.f1_binary_scores[self.test_datasets[i]])/n)
                 res["mean recall"].append(sum(self.recall_scores[self.test_datasets[i]])/n)
                 res["mean precision"].append(sum(self.precision_scores[self.test_datasets[i]])/n)
                 res["mean accuracy"].append(sum(self.accuracy[self.test_datasets[i]])/n)
                 res["std f1 macro"].append(np.std(self.f1_macro_scores[self.test_datasets[i]]))
-                res["std f1 weighted"].append(np.std(self.f1_weighted_scores[self.test_datasets[i]]))
+                res["std f1 binary"].append(np.std(self.f1_binary_scores[self.test_datasets[i]]))
                 res["std recall"].append(np.std(self.recall_scores[self.test_datasets[i]]))
                 res["std precision"].append(np.std(self.precision_scores[self.test_datasets[i]]))
                 res["std accuracy"].append(np.std(self.accuracy[self.test_datasets[i]]))
@@ -329,10 +334,10 @@ class BERTKfold:
         accuracy = accuracy_score(labels, preds)
         precision = precision_score(labels, preds)
         recall = recall_score(labels, preds)
-        f1_weighted = f1_score(labels, preds, average='weighted')
+        f1_binary = f1_score(labels, preds)
         f1_macro = f1_score(labels, preds, average='macro')
 
-        metrics = {'accuracy': accuracy, 'precision': precision, 'recall': recall, 'f1_weighted': f1_weighted,'f1_macro':f1_macro}
+        metrics = {'accuracy': accuracy, 'precision': precision, 'recall': recall, 'f1_binary': f1_binary,'f1_macro':f1_macro}
         # print(metrics) 
         return metrics
 
@@ -348,17 +353,17 @@ class BERTKfold:
             print(self.test_datasets[i]," metrics ",metrics)
             # f1, recall, precision = self.evaluate_model(test,self.test_datasets[i])
             self.f1_macro_scores[self.test_datasets[i]] = metrics["eval_f1_macro"]
-            self.f1_weighted_scores[self.test_datasets[i]] = metrics["eval_f1_weighted"]
+            self.f1_binary_scores[self.test_datasets[i]] = metrics["eval_f1_binary"]
             self.recall_scores[self.test_datasets[i]] = metrics["eval_recall"]
             self.precision_scores[self.test_datasets[i]] = metrics["eval_precision"]
             self.accuracy[self.test_datasets[i]] = metrics["eval_accuracy"]
             
         #save results
-        res = {"test data":[],"f1_macro":[],"f1_weighted":[],"recall":[],"precision":[],"accuracy":[]}
+        res = {"test data":[],"f1_macro":[],"f1_binary":[],"recall":[],"precision":[],"accuracy":[]}
         for i in range (len(self.test_datasets)):
             res["test data"].append(self.test_datasets[i].split('/')[-2])
             res["f1_macro"].append(self.f1_macro_scores[self.test_datasets[i]])
-            res["f1_weighted"].append(self.f1_weighted_scores[self.test_datasets[i]])
+            res["f1_binary"].append(self.f1_binary_scores[self.test_datasets[i]])
             res["recall"].append(self.recall_scores[self.test_datasets[i]])
             res["precision"].append(self.precision_scores[self.test_datasets[i]])
             res["accuracy"].append(self.accuracy[self.test_datasets[i]])
