@@ -1,0 +1,10 @@
+# Whitelist: track only scripts at the top level.
+# Models, datasets, results, logs, figures and notebooks (which embed outputs) stay out.
+/*
+!/.gitignore
+!/*.py
+!/*.sh
+!/*.sbatch
+
+__pycache__/
+*.pyc
